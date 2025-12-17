@@ -5,6 +5,31 @@
 # follows official upstream conventions:
 # https://www.drupal.org/docs/develop/using-composer
 
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# IDE/Editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# PHP/Testing
+*.log
+error_log
+.phpunit.result.cache
+phpunit.xml
+
+# Node (if using for theme compilation)
+node_modules/
+
 # Ignore configuration files that may contain sensitive information
 /web/sites/*/*settings*.php
 /web/sites/*/*services*.yml

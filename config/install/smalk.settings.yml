@@ -1,0 +1,29 @@
+# Default configuration for Smalk module.
+# Only API Key is required - workspace info is fetched automatically.
+
+# API Key (required)
+api_key: ''
+
+# Cached workspace info (fetched from API)
+workspace_key: ''
+workspace_name: ''
+publisher_activated: false
+
+# Feature toggles
+enabled: true
+tracking_enabled: true
+ads_enabled: true
+
+# Performance settings
+api_timeout: 1.0
+
+# Exclusions
+exclude_admin_pages: true
+excluded_paths: |
+  /admin/*
+  /user/*
+  /api/*
+  /.well-known/*
+
+# Debug
+debug_mode: false

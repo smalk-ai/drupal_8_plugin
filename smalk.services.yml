@@ -1,0 +1,30 @@
+services:
+  # HTTP Middleware for server-side TRACKING.
+  # Priority 250 ensures it runs BEFORE Drupal's page_cache (priority 200).
+  # This is critical for tracking EVERY request including cached pages.
+  smalk.tracking_middleware:
+    class: Drupal\smalk\StackMiddleware\SmalkTrackingMiddleware
+    arguments: ['@config.factory', '@http_client', '@logger.factory']
+    tags:
+      - { name: http_middleware, priority: 250 }
+
+  # HTTP Middleware for server-side AD INJECTION.
+  # Priority 100 ensures it runs AFTER Drupal's page_cache (priority 200) on the
+  # request phase, but BEFORE page_cache on the response phase.
+  # This allows us to:
+  # 1. Inject ads into the response
+  # 2. Set X-Smalk-Ads-Injected header
+  # 3. Response policy prevents page_cache from storing
+  smalk.ads_middleware:
+    class: Drupal\smalk\StackMiddleware\SmalkAdsMiddleware
+    arguments: ['@config.factory', '@http_client', '@logger.factory']
+    tags:
+      - { name: http_middleware, priority: 100 }
+
+  # Response Policy to prevent page_cache from caching pages with ads.
+  # This service tells Drupal's page_cache module to NOT store responses
+  # that have the X-Smalk-Ads-Injected header set.
+  smalk.page_cache.response_policy.smalk_ads:
+    class: Drupal\smalk\PageCache\SmalkAdsResponsePolicy
+    tags:
+      - { name: page_cache_response_policy }

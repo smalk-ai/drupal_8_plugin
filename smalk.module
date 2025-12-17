@@ -1,0 +1,132 @@
+<?php
+
+/**
+ * @file
+ * Smalk module for AI Agent Tracking and AI Search Ads (Drupal 8).
+ *
+ * This module provides:
+ * 1. JavaScript tracker injection for frontend analytics
+ * 2. Server-side tracking for AI Agent detection
+ * 3. Server-side AI Search Ads injection into pages
+ */
+
+use Drupal\Core\Routing\RouteMatchInterface;
+
+/**
+ * Implements hook_help().
+ */
+function smalk_help($route_name, RouteMatchInterface $route_match) {
+  switch ($route_name) {
+    case 'help.page.smalk':
+      $output = '';
+      $output .= '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . t('The Smalk module provides complete GEO (Generative Engine Optimization) integration including:') . '</p>';
+      $output .= '<ul>';
+      $output .= '<li>' . t('<strong>JavaScript Tracker</strong>: Automatically adds the Smalk tracker script to all pages for frontend analytics.') . '</li>';
+      $output .= '<li>' . t('<strong>Server-Side Tracking</strong>: Tracks all page visits including AI Agents that don\'t execute JavaScript.') . '</li>';
+      $output .= '<li>' . t('<strong>AI Search Ads</strong>: Server-side injection of contextual ads into &lt;div smalk-ads&gt;&lt;/div&gt; elements.') . '</li>';
+      $output .= '</ul>';
+      $output .= '<h3>' . t('Configuration') . '</h3>';
+      $output .= '<p>' . t('Configure the module at <a href=":settings">Administration &gt; Configuration &gt; Web services &gt; Smalk</a>.', [':settings' => '/admin/config/services/smalk']) . '</p>';
+      $output .= '<h3>' . t('Usage') . '</h3>';
+      $output .= '<p>' . t('For ad placements, add the following HTML to your templates or content:') . '</p>';
+      $output .= '<pre>&lt;div smalk-ads&gt;&lt;/div&gt;</pre>';
+      $output .= '<p>' . t('For multiple placements on the same page, add unique IDs:') . '</p>';
+      $output .= '<pre>&lt;div smalk-ads id="header-ad"&gt;&lt;/div&gt;
+&lt;div smalk-ads id="sidebar-ad"&gt;&lt;/div&gt;</pre>';
+      return $output;
+  }
+}
+
+/**
+ * Implements hook_filter_info_alter().
+ *
+ * This allows us to modify filter definitions, but for Drupal 8,
+ * we need to use a plugin approach or configure text formats manually.
+ */
+function smalk_filter_info_alter(&$info) {
+  // Note: In Drupal 8+, filters are plugins, so this hook has limited effect.
+  // Users need to configure their text format to allow the smalk-ads attribute.
+  // See README.md for instructions.
+}
+
+/**
+ * Implements hook_editor_js_settings_alter().
+ *
+ * Adds smalk-ads attribute to CKEditor 4's extraAllowedContent.
+ * This allows the smalk-ads attribute on div elements in CKEditor.
+ */
+function smalk_editor_js_settings_alter(array &$settings) {
+  // Check if we have CKEditor settings.
+  if (!isset($settings['editor']['formats'])) {
+    return;
+  }
+
+  foreach ($settings['editor']['formats'] as $format => &$format_settings) {
+    // Only modify CKEditor (4) settings.
+    if (!isset($format_settings['editor']) || $format_settings['editor'] !== 'ckeditor') {
+      continue;
+    }
+
+    // Add smalk-ads to extraAllowedContent.
+    // Format: element[attributes]{styles}(classes)
+    $smalk_allowed = 'div[smalk-ads,id]';
+
+    if (isset($format_settings['editorSettings']['extraAllowedContent'])) {
+      // Append to existing extraAllowedContent if not already there.
+      if (strpos($format_settings['editorSettings']['extraAllowedContent'], 'smalk-ads') === FALSE) {
+        $format_settings['editorSettings']['extraAllowedContent'] .= '; ' . $smalk_allowed;
+      }
+    }
+    else {
+      // Set extraAllowedContent.
+      $format_settings['editorSettings']['extraAllowedContent'] = $smalk_allowed;
+    }
+  }
+}
+
+/**
+ * Implements hook_page_attachments().
+ *
+ * Adds the Smalk JavaScript tracker to all pages.
+ */
+function smalk_page_attachments(array &$attachments) {
+  $config = \Drupal::config('smalk.settings');
+
+  // Check if module is enabled.
+  if (!$config->get('enabled')) {
+    return;
+  }
+
+  // Check if tracking is enabled.
+  if (!$config->get('tracking_enabled')) {
+    return;
+  }
+
+  $workspace_key = $config->get('workspace_key');
+  if (empty($workspace_key)) {
+    return;
+  }
+
+  // Skip admin pages if configured.
+  if ($config->get('exclude_admin_pages')) {
+    $route = \Drupal::routeMatch()->getRouteObject();
+    if ($route && $route->getOption('_admin_route')) {
+      return;
+    }
+  }
+
+  // Add the Smalk tracker script.
+  $tracker_url = \Drupal\smalk\Api\SmalkApi::getTrackerJsUrl();
+  $attachments['#attached']['html_head'][] = [
+    [
+      '#type' => 'html_tag',
+      '#tag' => 'script',
+      '#attributes' => [
+        'src' => $tracker_url . '?PROJECT_KEY=' . $workspace_key,
+        'async' => TRUE,
+      ],
+    ],
+    'smalk_tracker_script',
+  ];
+}
